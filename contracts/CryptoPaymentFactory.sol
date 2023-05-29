@@ -64,14 +64,14 @@ contract CryptoPaymentFactoryUpgradeable is
     function createContract(
         bytes32 salt_,
         Types.PaymentInfo calldata paymentInfo_,
-        Types.FeeInfo calldata agentInfo,
+        uint256 ownerPercent_,
         Types.FeeInfo calldata clientInfo,
-        uint96 ownerPercent_
+        Types.FeeInfo calldata agentInfo
     ) external onlyRole(Roles.OPERATOR_ROLE) {
         address clone = _cheapClone(
             salt_,
             INITIALIZE_SELECTOR,
-            abi.encode(paymentInfo_, Types.FeeInfo(admin(), ownerPercent_), agentInfo, clientInfo)
+            abi.encode(paymentInfo_, Types.FeeInfo(admin(), uint96(ownerPercent_)), clientInfo, agentInfo)
         );
         _instance[salt_] = Types.CloneInfo(clone, clientInfo.recipient);
         emit NewInstance(clone);

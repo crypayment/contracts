@@ -14,15 +14,15 @@ contract FeeCollector is IFeeCollector {
         if (feeInfo_.recipient != address(0)) _feeInfos.push(feeInfo_);
     }
 
-    function _updateFee(uint256 index_, Types.FeeInfo calldata feeInfo_) internal {
+    function _updateFee(uint256 index_, Types.FeeInfo memory feeInfo_) internal {
         if (feeInfo_.recipient == address(0)) revert InvalidRecipient();
         _feeInfos[index_] = feeInfo_;
     }
 
     function _configFees(
-        Types.FeeInfo calldata adminInfo_,
-        Types.FeeInfo calldata clientInfo_,
-        Types.FeeInfo calldata agentInfo_
+        Types.FeeInfo memory adminInfo_,
+        Types.FeeInfo memory clientInfo_,
+        Types.FeeInfo memory agentInfo_
     ) internal {
         _updateFee(0, adminInfo_);
         _updateFee(1, clientInfo_);

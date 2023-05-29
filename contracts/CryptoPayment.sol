@@ -11,6 +11,7 @@ import { Payment } from "./internal/Payment.sol";
 import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
 import { ICryptoPayment } from "./interfaces/ICryptoPayment.sol";
 import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
+import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
 import { IAccessControlUpgradeable } from "./interfaces/IAccessControlUpgradeable.sol";
 
 import { Types } from "./libraries/Types.sol";
@@ -22,7 +23,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
 
     receive() external payable {}
 
-    IAccessControlUpgradeable public factory;
+    address public factory;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -40,14 +41,14 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         Types.FeeInfo calldata clientInfo_,
         Types.FeeInfo calldata agentInfo_
     ) external initializer {
-        factory = IAccessControlUpgradeable(_msgSender());
+        factory = _msgSender();
         _setPayment(paymentInfo_);
         _addFee(adminInfo_);
         _addFee(clientInfo_);
         _addFee(agentInfo_);
     }
 
-    function distribute() external onlyFactoryRole(Roles.OPERATOR_ROLE) {
+    function distribute() external override onlyFactoryRole(Roles.OPERATOR_ROLE) {
         (address[] memory recipients, uint256[] memory fees) = viewFees();
         uint256 length = recipients.length;
         address payment = paymentInfo.token;
@@ -93,7 +94,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
             }
         }
 
-        emit RewardsSplitted();
+        emit Distribute();
     }
 
     function claimFees(
@@ -134,12 +135,13 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
 
     function config(
         Types.PaymentInfo calldata paymentInfo_,
-        Types.FeeInfo calldata adminInfo_,
+        uint256 ownerPercent_,
         Types.FeeInfo calldata clientInfo_,
         Types.FeeInfo calldata agentInfo_
     ) external onlyFactoryRole(Roles.OPERATOR_ROLE) {
+        address admin = ICryptoPaymentFactoryUpgradeable(factory).admin();
         _setPayment(paymentInfo_);
-        _configFees(adminInfo_, clientInfo_, agentInfo_);
+        _configFees(Types.FeeInfo(admin, uint96(ownerPercent_)), clientInfo_, agentInfo_);
     }
 
     function _config(
@@ -155,6 +157,6 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
     }
 
     function _checkRole(bytes32 role) internal view {
-        if (!factory.hasRole(role, _msgSender())) revert NotAuthorized();
+        if (!IAccessControlUpgradeable(factory).hasRole(role, _msgSender())) revert NotAuthorized();
     }
 }
