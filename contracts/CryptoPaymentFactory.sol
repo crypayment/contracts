@@ -16,9 +16,8 @@ import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFac
 import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
 
 import { ErrorHandler } from "./libraries/ErrorHandler.sol";
-import { Roles } from "./libraries/Roles.sol";
 import { Types } from "./libraries/Types.sol";
-import { HUNDER_PERCENT } from "./libraries/Constants.sol";
+import { HUNDER_PERCENT, OPERATOR_ROLE, SERVER_ROLE, UPGRADER_ROLE } from "./libraries/Constants.sol";
 
 contract CryptoPaymentFactoryUpgradeable is
     ICryptoPaymentFactoryUpgradeable,
@@ -54,11 +53,11 @@ contract CryptoPaymentFactoryUpgradeable is
         __UUPSUpgradeable_init();
         __Payment_init(payment_);
 
-        bytes32 operatorRole = Roles.OPERATOR_ROLE;
+        bytes32 operatorRole = OPERATOR_ROLE;
         _grantRole(operatorRole, operator_);
         _grantRole(operatorRole, admin_);
-        _grantRole(Roles.SERVER_ROLE, server_);
-        _grantRole(Roles.UPGRADER_ROLE, admin_);
+        _grantRole(SERVER_ROLE, server_);
+        _grantRole(UPGRADER_ROLE, admin_);
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
     }
 
@@ -67,7 +66,7 @@ contract CryptoPaymentFactoryUpgradeable is
         Types.PaymentInfo calldata paymentInfo_,
         Types.FeeInfo calldata clientInfo,
         Types.FeeInfo calldata agentInfo
-    ) external onlyRole(Roles.OPERATOR_ROLE) {
+    ) external onlyRole(OPERATOR_ROLE) {
         Types.FeeInfo memory adminInfo = Types.FeeInfo(
             admin(),
             HUNDER_PERCENT - clientInfo.percentage - agentInfo.percentage
@@ -85,7 +84,7 @@ contract CryptoPaymentFactoryUpgradeable is
     function claimFees(
         uint256 uid_,
         address[] calldata accounts_
-    ) external onlyRole(Roles.SERVER_ROLE) returns (uint256[] memory success) {
+    ) external onlyRole(SERVER_ROLE) returns (uint256[] memory success) {
         _setUsed(uid_);
 
         uint256 length = accounts_.length;
@@ -119,7 +118,7 @@ contract CryptoPaymentFactoryUpgradeable is
         emit Claimed(_msgSender(), success);
     }
 
-    function distribute(ICryptoPayment[] calldata instances_) external onlyRole(Roles.OPERATOR_ROLE) {
+    function distribute(ICryptoPayment[] calldata instances_) external onlyRole(OPERATOR_ROLE) {
         uint256 length = instances_.length;
         for (uint i = 0; i < length; ) {
             instances_[i].distribute();
@@ -138,14 +137,14 @@ contract CryptoPaymentFactoryUpgradeable is
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin_);
     }
 
-    function setPayment(Types.PaymentInfo calldata payment_) external onlyRole(Roles.OPERATOR_ROLE) {
+    function setPayment(Types.PaymentInfo calldata payment_) external onlyRole(OPERATOR_ROLE) {
         _setPayment(payment_);
     }
 
-    function setImplement(address implement_) external onlyRole(Roles.UPGRADER_ROLE) {
+    function setImplement(address implement_) external onlyRole(UPGRADER_ROLE) {
         _setImplement(implement_);
     }
 
     /* solhint-disable no-empty-blocks */
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(Roles.UPGRADER_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 }

@@ -15,8 +15,7 @@ import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFac
 import { IAccessControlUpgradeable } from "./interfaces/IAccessControlUpgradeable.sol";
 
 import { Types } from "./libraries/Types.sol";
-import { Roles } from "./libraries/Roles.sol";
-import { HUNDER_PERCENT } from "./libraries/Constants.sol";
+import { HUNDER_PERCENT, OPERATOR_ROLE, SERVER_ROLE } from "./libraries/Constants.sol";
 
 contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, UniqueChecking, Payment {
     bytes32 private constant TRANSFER_SELECTOR = 0xa9059cbb00000000000000000000000000000000000000000000000000000000;
@@ -47,7 +46,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         _addFee(agentInfo_);
     }
 
-    function distribute() external override onlyFactoryRole(Roles.OPERATOR_ROLE) {
+    function distribute() external override onlyFactoryRole(OPERATOR_ROLE) {
         (address[] memory recipients, uint256[] memory fees) = viewFees();
         uint256 length = recipients.length;
         address payment = paymentInfo.token;
@@ -99,7 +98,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
     function claimFees(
         uint256 uid_,
         address[] calldata accounts_
-    ) external onlyFactoryRole(Roles.SERVER_ROLE) returns (uint256[] memory success) {
+    ) external onlyFactoryRole(SERVER_ROLE) returns (uint256[] memory success) {
         _setUsed(uid_);
 
         uint256 length = accounts_.length;
@@ -136,7 +135,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         Types.PaymentInfo calldata paymentInfo_,
         Types.FeeInfo calldata clientInfo_,
         Types.FeeInfo calldata agentInfo_
-    ) external onlyFactoryRole(Roles.OPERATOR_ROLE) {
+    ) external onlyFactoryRole(OPERATOR_ROLE) {
         Types.FeeInfo memory adminInfo = Types.FeeInfo(
             ICryptoPaymentFactoryUpgradeable(factory).admin(),
             HUNDER_PERCENT - clientInfo_.percentage - agentInfo_.percentage
