@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { Types } from "../libraries/Types.sol";
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 interface IFeeCollector {
     error LengthMisMatch();

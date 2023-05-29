@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 library Roles {
     bytes32 public constant SERVER_ROLE = 0xa8a7bc421f721cb936ea99efdad79237e6ee0b871a2a08cf648691f9584cdc77;
