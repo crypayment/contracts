@@ -32,7 +32,7 @@ contract CryptoPaymentFactoryUpgradeable is
 
     bytes4 private constant INITIALIZE_SELECTOR = 0x1cd8a2e0;
 
-    mapping(bytes32 => Types.CloneInfo) private _instance;
+    mapping(bytes32 => Types.CloneInfo) public instance;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -77,7 +77,7 @@ contract CryptoPaymentFactoryUpgradeable is
             INITIALIZE_SELECTOR,
             abi.encode(paymentInfo_, adminInfo, clientInfo, agentInfo)
         );
-        _instance[salt_] = Types.CloneInfo(clone, clientInfo.recipient);
+        instance[salt_] = Types.CloneInfo(clone, clientInfo.recipient);
         emit NewInstance(clone);
     }
 
