@@ -30,7 +30,7 @@ contract CryptoPaymentFactoryUpgradeable is
 {
     using ErrorHandler for bool;
 
-    bytes4 private constant INITIALIZE_SELECTOR = 0xff1d5752;
+    bytes4 private constant INITIALIZE_SELECTOR = 0x1cd8a2e0;
 
     mapping(bytes32 => Types.CloneInfo) private _instance;
 
