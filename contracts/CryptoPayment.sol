@@ -6,6 +6,7 @@ import { Context } from "@openzeppelin/contracts/utils/Context.sol";
 
 import { FeeCollector } from "./internal/FeeCollector.sol";
 import { UniqueChecking } from "./internal/UniqueChecking.sol";
+import { Payment } from "./internal/Payment.sol";
 
 import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
 import { ICryptoPayment } from "./interfaces/ICryptoPayment.sol";
@@ -15,14 +16,13 @@ import { IAccessControlUpgradeable } from "./interfaces/IAccessControlUpgradeabl
 import { Types } from "./libraries/Types.sol";
 import { Roles } from "./libraries/Roles.sol";
 
-contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, UniqueChecking {
+contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, UniqueChecking, Payment {
     bytes32 private constant TRANSFER_SELECTOR = 0xa9059cbb00000000000000000000000000000000000000000000000000000000;
     bytes32 private constant BALANCEOF_SELECTOR = 0x70a0823100000000000000000000000000000000000000000000000000000000;
 
     receive() external payable {}
 
     IAccessControlUpgradeable public factory;
-    Types.PaymentInfo public paymentInfo;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -35,12 +35,13 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
     }
 
     function initialize(
-        // Types.PaymentInfo calldata paymentInfo_,
+        Types.PaymentInfo calldata paymentInfo_,
         Types.FeeInfo calldata adminInfo_,
         Types.FeeInfo calldata clientInfo_,
         Types.FeeInfo calldata agentInfo_
     ) external initializer {
         factory = IAccessControlUpgradeable(_msgSender());
+        _setPayment(paymentInfo_);
         _addFee(adminInfo_);
         _addFee(clientInfo_);
         _addFee(agentInfo_);
@@ -129,6 +130,28 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         }
 
         emit Claimed(_msgSender(), success);
+    }
+
+    function config(
+        Types.PaymentInfo calldata paymentInfo_,
+        Types.FeeInfo calldata adminInfo_,
+        Types.FeeInfo calldata clientInfo_,
+        Types.FeeInfo calldata agentInfo_
+    ) external onlyFactoryRole(Roles.OPERATOR_ROLE) {
+        _setPayment(paymentInfo_);
+        _configFees(adminInfo_, clientInfo_, agentInfo_);
+    }
+
+    function _config(
+        Types.PaymentInfo calldata paymentInfo_,
+        Types.FeeInfo calldata adminInfo_,
+        Types.FeeInfo calldata clientInfo_,
+        Types.FeeInfo calldata agentInfo_
+    ) internal {
+        _setPayment(paymentInfo_);
+        _addFee(adminInfo_);
+        _addFee(clientInfo_);
+        _addFee(agentInfo_);
     }
 
     function _checkRole(bytes32 role) internal view {
