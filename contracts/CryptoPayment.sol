@@ -136,7 +136,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         uint256 ownerPercent_,
         Types.FeeInfo calldata clientInfo_,
         Types.FeeInfo calldata agentInfo_
-    ) external onlyRole(Roles.OPERATOR_ROLE) {
+    ) external onlyFactoryRole(Roles.OPERATOR_ROLE) {
         address admin = ICryptoPaymentFactoryUpgradeable(factory).admin();
         _setPayment(paymentInfo_);
         _configFees(Types.FeeInfo(admin, uint96(ownerPercent_)), clientInfo_, agentInfo_);
