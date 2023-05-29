@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 interface ICryptoPayment {
-    error Nothing();
+    error NotAuthorized();
+
+    event Distribute();
+    event Claimed(address indexed sender, uint256[] success);
+
+    function distribute() external;
 }

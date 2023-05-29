@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 import { ClonesUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -35,6 +35,17 @@ abstract contract FactoryUpgradeable is Initializable {
         if (!success) success.handleRevertIfNotSuccess(revertData);
 
         _instances.add(clone);
+    }
+
+    function viewInstanceAddresses(uint256 cursor, uint256 size) external view returns (address[] memory instances) {
+        // skip the overflow check
+        instances = new address[](size);
+        for (uint i = 0; i < size; ) {
+            instances[i] = _instances.at(cursor + i);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     uint256[47] private __gap;

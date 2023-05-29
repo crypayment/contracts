@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 import { Types } from "../libraries/Types.sol";
 
 interface ICryptoPaymentFactoryUpgradeable {
@@ -18,8 +18,7 @@ interface ICryptoPaymentFactoryUpgradeable {
         bytes32 salt_,
         Types.PaymentInfo calldata paymentInfo_,
         Types.FeeInfo calldata agentInfo,
-        Types.FeeInfo calldata clientInfo,
-        uint96 ownerPercent_
+        Types.FeeInfo calldata clientInfo
     ) external;
 
     event NewInstance(address indexed clone);
