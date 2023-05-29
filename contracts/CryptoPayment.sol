@@ -21,8 +21,6 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
     bytes32 private constant TRANSFER_SELECTOR = 0xa9059cbb00000000000000000000000000000000000000000000000000000000;
     bytes32 private constant BALANCEOF_SELECTOR = 0x70a0823100000000000000000000000000000000000000000000000000000000;
 
-    receive() external payable {}
-
     address public factory;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -31,7 +29,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
     }
 
     modifier onlyFactoryRole(bytes32 role) {
-        _checkRole(role);
+        if (!_checkFactoryRole(role)) revert NotAuthorized();
         _;
     }
 
@@ -138,7 +136,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         uint256 ownerPercent_,
         Types.FeeInfo calldata clientInfo_,
         Types.FeeInfo calldata agentInfo_
-    ) external onlyFactoryRole(Roles.OPERATOR_ROLE) {
+    ) external onlyRole(Roles.OPERATOR_ROLE) {
         address admin = ICryptoPaymentFactoryUpgradeable(factory).admin();
         _setPayment(paymentInfo_);
         _configFees(Types.FeeInfo(admin, uint96(ownerPercent_)), clientInfo_, agentInfo_);
@@ -156,7 +154,13 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         _addFee(agentInfo_);
     }
 
-    function _checkRole(bytes32 role) internal view {
-        if (!IAccessControlUpgradeable(factory).hasRole(role, _msgSender())) revert NotAuthorized();
+    function _checkFactoryRole(bytes32 role) internal view returns (bool) {
+        address sender = _msgSender();
+        // direct call
+        if (IAccessControlUpgradeable(factory).hasRole(role, sender)) return true;
+
+        // forward call
+        if (sender == factory && IAccessControlUpgradeable(factory).hasRole(role, tx.origin)) return true;
+        return false;
     }
 }

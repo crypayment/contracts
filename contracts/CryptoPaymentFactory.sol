@@ -11,6 +11,7 @@ import { PaymentUpgradeable } from "./internal-upgradeable/PaymentUpgradeable.so
 
 import { UniqueChecking } from "./internal/UniqueChecking.sol";
 
+import { ICryptoPayment } from "./interfaces/ICryptoPayment.sol";
 import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
 import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
 
@@ -88,7 +89,7 @@ contract CryptoPaymentFactoryUpgradeable is
 
         bytes memory callData = abi.encodeCall(
             IERC20Upgradeable.transferFrom,
-            (address(0), address(this), paymentInfo.amount)
+            (address(0), admin(), paymentInfo.amount)
         );
 
         address payment = paymentInfo.token;
@@ -114,6 +115,16 @@ contract CryptoPaymentFactoryUpgradeable is
         emit Claimed(_msgSender(), success);
     }
 
+    function distribute(ICryptoPayment[] calldata instances_) external onlyRole(Roles.OPERATOR_ROLE) {
+        uint256 length = instances_.length;
+        for (uint i = 0; i < length; ) {
+            instances_[i].distribute();
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     function admin() public view override returns (address) {
         return getRoleMember(DEFAULT_ADMIN_ROLE, 0);
     }
@@ -123,12 +134,12 @@ contract CryptoPaymentFactoryUpgradeable is
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin_);
     }
 
-    function setImplement(address implement_) external onlyRole(Roles.OPERATOR_ROLE) {
-        _setImplement(implement_);
-    }
-
     function setPayment(Types.PaymentInfo calldata payment_) external onlyRole(Roles.OPERATOR_ROLE) {
         _setPayment(payment_);
+    }
+
+    function setImplement(address implement_) external onlyRole(Roles.UPGRADER_ROLE) {
+        _setImplement(implement_);
     }
 
     /* solhint-disable no-empty-blocks */

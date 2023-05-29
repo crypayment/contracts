@@ -12,6 +12,7 @@
     "no-inline-assembly": "off",
     "func-name-mixedcase": "off",
     "avoid-low-level-calls": "off",
+    "avoid-tx-origin": "off",
     "prettier/prettier": [
       "error",
       {
