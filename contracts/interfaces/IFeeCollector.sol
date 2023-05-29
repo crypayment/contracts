@@ -9,5 +9,5 @@ interface IFeeCollector {
 
     event FeeUpdated();
 
-    function viewFees() external view returns (Types.FeeInfo[] memory feeInfoDetails);
+    function viewFees() external view returns (address[] memory recipients, uint256[] memory percentages);
 }

@@ -5,43 +5,45 @@ pragma solidity 0.8.20;
 import { Types } from "../libraries/Types.sol";
 import { IFeeCollector } from "../interfaces/IFeeCollector.sol";
 
+// Fixed position => do not use Enumrable
 contract FeeCollector is IFeeCollector {
-    uint256 public constant HUNDER_PERCENT = 10_000; // 100%
-    Types.FeeInfo[] public feeInfos;
+    uint256 public constant HUNDER_PERCENT = 10_000;
+    Types.FeeInfo[] private _feeInfos;
 
-    function _configFees(uint256[] calldata indexes_, Types.FeeInfo[] calldata feeInfos_) internal {
-        uint256 length = indexes_.length;
-        if (feeInfos_.length != length) revert LengthMisMatch();
+    function _addFee(Types.FeeInfo calldata feeInfo_) internal {
+        if (feeInfo_.recipient != address(0)) _feeInfos.push(feeInfo_);
+    }
 
-        uint256 index;
-        Types.FeeInfo memory feeInfo;
+    function _updateFee(uint256 index_, Types.FeeInfo calldata feeInfo_) internal {
+        if (feeInfo_.recipient == address(0)) revert InvalidRecipient();
+        _feeInfos[index_] = feeInfo_;
+    }
 
-        for (uint256 i = 0; i < length; ) {
-            index = indexes_[i];
-            feeInfo = feeInfos_[i];
-
-            if (feeInfo.recipient == address(0)) revert InvalidRecipient();
-            feeInfos[index] = feeInfo;
-            unchecked {
-                ++i;
-            }
-        }
-
+    function _configFees(
+        Types.FeeInfo calldata adminInfo_,
+        Types.FeeInfo calldata clientInfo_,
+        Types.FeeInfo calldata agentInfo_
+    ) internal {
+        _updateFee(0, adminInfo_);
+        _updateFee(1, clientInfo_);
+        _updateFee(2, agentInfo_);
         emit FeeUpdated();
     }
 
-    function viewFees() external view returns (Types.FeeInfo[] memory feeInfoDetails) {
-        uint256 length = feeInfos.length;
+    function viewFees() public view returns (address[] memory recipients, uint256[] memory percentages) {
+        uint256 length = _feeInfos.length;
 
-        feeInfoDetails = new Types.FeeInfo[](length);
+        recipients = new address[](length);
+        percentages = new uint256[](length);
 
         for (uint256 i = 0; i < length; ) {
-            feeInfoDetails[i] = feeInfos[i];
+            recipients[i] = _feeInfos[i].recipient;
+            percentages[i] = (_feeInfos[i].percentage);
             unchecked {
                 ++i;
             }
         }
-        return (feeInfoDetails);
+        return (recipients, percentages);
     }
 
     uint256[45] private __gap;

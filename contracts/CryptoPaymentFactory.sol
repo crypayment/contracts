@@ -8,7 +8,8 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { AccessControlEnumerableUpgradeable } from "./internal-upgradeable/AccessControlEnumerableUpgradeable.sol";
 import { FactoryUpgradeable } from "./internal-upgradeable/FactoryUpgradeable.sol";
 import { PaymentUpgradeable } from "./internal-upgradeable/PaymentUpgradeable.sol";
-import { UniqueCheckingUpgradeable } from "./internal-upgradeable/UniqueCheckingUpgradeable.sol";
+
+import { UniqueChecking } from "./internal/UniqueChecking.sol";
 
 import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
 import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
@@ -24,7 +25,7 @@ contract CryptoPaymentFactoryUpgradeable is
     AccessControlEnumerableUpgradeable,
     FactoryUpgradeable,
     PaymentUpgradeable,
-    UniqueCheckingUpgradeable
+    UniqueChecking
 {
     using ErrorHandler for bool;
 
