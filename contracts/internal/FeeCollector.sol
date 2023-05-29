@@ -7,7 +7,6 @@ import { IFeeCollector } from "../interfaces/IFeeCollector.sol";
 
 // Fixed position => do not use Enumrable
 contract FeeCollector is IFeeCollector {
-    uint256 public constant HUNDER_PERCENT = 10_000;
     Types.FeeInfo[] private _feeInfos;
 
     function _addFee(Types.FeeInfo calldata feeInfo_) internal {

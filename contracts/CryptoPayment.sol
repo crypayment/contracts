@@ -16,6 +16,7 @@ import { IAccessControlUpgradeable } from "./interfaces/IAccessControlUpgradeabl
 
 import { Types } from "./libraries/Types.sol";
 import { Roles } from "./libraries/Roles.sol";
+import { HUNDER_PERCENT } from "./libraries/Constants.sol";
 
 contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, UniqueChecking, Payment {
     bytes32 private constant TRANSFER_SELECTOR = 0xa9059cbb00000000000000000000000000000000000000000000000000000000;
@@ -133,25 +134,16 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
 
     function config(
         Types.PaymentInfo calldata paymentInfo_,
-        uint256 ownerPercent_,
         Types.FeeInfo calldata clientInfo_,
         Types.FeeInfo calldata agentInfo_
     ) external onlyFactoryRole(Roles.OPERATOR_ROLE) {
-        address admin = ICryptoPaymentFactoryUpgradeable(factory).admin();
-        _setPayment(paymentInfo_);
-        _configFees(Types.FeeInfo(admin, uint96(ownerPercent_)), clientInfo_, agentInfo_);
-    }
+        Types.FeeInfo memory adminInfo = Types.FeeInfo(
+            ICryptoPaymentFactoryUpgradeable(factory).admin(),
+            HUNDER_PERCENT - clientInfo_.percentage - agentInfo_.percentage
+        );
 
-    function _config(
-        Types.PaymentInfo calldata paymentInfo_,
-        Types.FeeInfo calldata adminInfo_,
-        Types.FeeInfo calldata clientInfo_,
-        Types.FeeInfo calldata agentInfo_
-    ) internal {
         _setPayment(paymentInfo_);
-        _addFee(adminInfo_);
-        _addFee(clientInfo_);
-        _addFee(agentInfo_);
+        _configFees(adminInfo, clientInfo_, agentInfo_);
     }
 
     function _checkFactoryRole(bytes32 role) internal view returns (bool) {

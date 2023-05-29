@@ -18,6 +18,7 @@ import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
 import { ErrorHandler } from "./libraries/ErrorHandler.sol";
 import { Roles } from "./libraries/Roles.sol";
 import { Types } from "./libraries/Types.sol";
+import { HUNDER_PERCENT } from "./libraries/Constants.sol";
 
 contract CryptoPaymentFactoryUpgradeable is
     ICryptoPaymentFactoryUpgradeable,
@@ -58,21 +59,24 @@ contract CryptoPaymentFactoryUpgradeable is
         _grantRole(operatorRole, admin_);
         _grantRole(Roles.SERVER_ROLE, server_);
         _grantRole(Roles.UPGRADER_ROLE, admin_);
-        _grantRole(Roles.TREASURER_ROLE, admin_);
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
     }
 
     function createContract(
         bytes32 salt_,
         Types.PaymentInfo calldata paymentInfo_,
-        uint256 ownerPercent_,
         Types.FeeInfo calldata clientInfo,
         Types.FeeInfo calldata agentInfo
     ) external onlyRole(Roles.OPERATOR_ROLE) {
+        Types.FeeInfo memory adminInfo = Types.FeeInfo(
+            admin(),
+            HUNDER_PERCENT - clientInfo.percentage - agentInfo.percentage
+        );
+
         address clone = _cheapClone(
             salt_,
             INITIALIZE_SELECTOR,
-            abi.encode(paymentInfo_, Types.FeeInfo(admin(), uint96(ownerPercent_)), clientInfo, agentInfo)
+            abi.encode(paymentInfo_, adminInfo, clientInfo, agentInfo)
         );
         _instance[salt_] = Types.CloneInfo(clone, clientInfo.recipient);
         emit NewInstance(clone);

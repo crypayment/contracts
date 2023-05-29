@@ -17,7 +17,6 @@ interface ICryptoPaymentFactoryUpgradeable {
     function createContract(
         bytes32 salt_,
         Types.PaymentInfo calldata paymentInfo_,
-        uint256 ownerPercent_,
         Types.FeeInfo calldata agentInfo,
         Types.FeeInfo calldata clientInfo
     ) external;
