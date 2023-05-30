@@ -2,12 +2,31 @@
 
 pragma solidity 0.8.19;
 
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { Types } from "../libraries/Types.sol";
 import { IFeeCollector } from "../interfaces/IFeeCollector.sol";
 
 // Fixed position => do not use Enumrable
-contract FeeCollector is IFeeCollector {
+contract FeeCollectorUpgradeable is IFeeCollector, Initializable {
     Types.FeeInfo[] private _feeInfos;
+
+    function __FeeCollector_init(
+        Types.FeeInfo calldata adminInfo_,
+        Types.FeeInfo calldata clientInfo_,
+        Types.FeeInfo calldata agentInfo_
+    ) internal onlyInitializing {
+        __FeeCollector_init_unchained(adminInfo_, clientInfo_, agentInfo_);
+    }
+
+    function __FeeCollector_init_unchained(
+        Types.FeeInfo calldata adminInfo_,
+        Types.FeeInfo calldata clientInfo_,
+        Types.FeeInfo calldata agentInfo_
+    ) internal onlyInitializing {
+        _addFee(adminInfo_);
+        _addFee(clientInfo_);
+        _addFee(agentInfo_);
+    }
 
     function _addFee(Types.FeeInfo calldata feeInfo_) internal {
         if (feeInfo_.recipient != address(0)) _feeInfos.push(feeInfo_);
@@ -45,5 +64,5 @@ contract FeeCollector is IFeeCollector {
         return (recipients, percentages);
     }
 
-    uint256[45] private __gap;
+    uint256[9] private __gap;
 }

@@ -1,23 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
-import { FeeCollector } from "./internal/FeeCollector.sol";
-import { UniqueChecking } from "./internal/UniqueChecking.sol";
-import { Payment } from "./internal/Payment.sol";
+import { ClaimFeeUpgradeable } from "./internal-upgradeable/ClaimFeeUpgradeable.sol";
+import { FeeCollectorUpgradeable } from "./internal-upgradeable/FeeCollectorUpgradeable.sol";
+import { PaymentUpgradeable } from "./internal-upgradeable/PaymentUpgradeable.sol";
 
-import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
-import { ICryptoPayment } from "./interfaces/ICryptoPayment.sol";
-import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
-import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
 import { IAccessControlUpgradeable } from "./interfaces/IAccessControlUpgradeable.sol";
+import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
+import { ICryptoPaymentUpgradeable } from "./interfaces/ICryptoPaymentUpgradeable.sol";
+import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
 
 import { Types } from "./libraries/Types.sol";
 import { HUNDER_PERCENT, OPERATOR_ROLE, SERVER_ROLE } from "./libraries/Constants.sol";
 
-contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, UniqueChecking, Payment {
+contract CryptoPaymentUpgradeable is
+    ICryptoPaymentUpgradeable,
+    Initializable,
+    ContextUpgradeable,
+    ClaimFeeUpgradeable,
+    FeeCollectorUpgradeable,
+    PaymentUpgradeable
+{
     bytes32 private constant TRANSFER_SELECTOR = 0xa9059cbb00000000000000000000000000000000000000000000000000000000;
     bytes32 private constant BALANCEOF_SELECTOR = 0x70a0823100000000000000000000000000000000000000000000000000000000;
 
@@ -40,10 +46,8 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         Types.FeeInfo calldata agentInfo_
     ) external initializer {
         factory = _msgSender();
-        _setPayment(paymentInfo_);
-        _addFee(adminInfo_);
-        _addFee(clientInfo_);
-        _addFee(agentInfo_);
+        __Payment_init(paymentInfo_);
+        __FeeCollector_init(adminInfo_, clientInfo_, agentInfo_);
     }
 
     function distribute() external override onlyFactoryRole(OPERATOR_ROLE) {
@@ -98,37 +102,9 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
     function claimFees(
         uint256 uid_,
         address[] calldata accounts_
-    ) external onlyFactoryRole(SERVER_ROLE) returns (uint256[] memory success) {
-        _setUsed(uid_);
-
-        uint256 length = accounts_.length;
-        success = new uint256[](length);
-
-        bytes memory callData = abi.encodeCall(
-            IERC20Upgradeable.transferFrom,
-            (address(0), address(this), paymentInfo.amount)
-        );
-
-        address payment = paymentInfo.token;
-        bool ok;
-        address account;
-        for (uint256 i; i < length; ) {
-            account = accounts_[i];
-
-            assembly {
-                mstore(add(callData, 0x24), account)
-            }
-
-            (ok, ) = payment.call(callData);
-
-            success[i] = ok ? 2 : 1;
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        emit Claimed(_msgSender(), success);
+    ) external override onlyFactoryRole(SERVER_ROLE) returns (uint256[] memory success) {
+        Types.PaymentInfo memory paymentInfo_ = paymentInfo;
+        return _claimFees(uid_, paymentInfo_, address(this), accounts_);
     }
 
     function config(

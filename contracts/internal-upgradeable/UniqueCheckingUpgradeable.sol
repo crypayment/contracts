@@ -6,7 +6,7 @@ import { BitMaps } from "../libraries/BitMaps.sol";
 
 error AlreadyUsed();
 
-abstract contract UniqueChecking {
+abstract contract UniqueCheckingUpgradeable {
     using BitMaps for BitMaps.BitMap;
 
     BitMaps.BitMap private _isUsed;

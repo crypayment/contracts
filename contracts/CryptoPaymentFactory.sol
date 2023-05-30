@@ -6,14 +6,12 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import { AccessControlEnumerableUpgradeable } from "./internal-upgradeable/AccessControlEnumerableUpgradeable.sol";
+import { ClaimFeeUpgradeable } from "./internal-upgradeable/ClaimFeeUpgradeable.sol";
 import { FactoryUpgradeable } from "./internal-upgradeable/FactoryUpgradeable.sol";
 import { PaymentUpgradeable } from "./internal-upgradeable/PaymentUpgradeable.sol";
 
-import { UniqueChecking } from "./internal/UniqueChecking.sol";
-
-import { ICryptoPayment } from "./interfaces/ICryptoPayment.sol";
+import { ICryptoPaymentUpgradeable } from "./interfaces/ICryptoPaymentUpgradeable.sol";
 import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
-import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
 
 import { ErrorHandler } from "./libraries/ErrorHandler.sol";
 import { Types } from "./libraries/Types.sol";
@@ -24,9 +22,9 @@ contract CryptoPaymentFactoryUpgradeable is
     Initializable,
     UUPSUpgradeable,
     AccessControlEnumerableUpgradeable,
+    ClaimFeeUpgradeable,
     FactoryUpgradeable,
-    PaymentUpgradeable,
-    UniqueChecking
+    PaymentUpgradeable
 {
     using ErrorHandler for bool;
 
@@ -49,8 +47,6 @@ contract CryptoPaymentFactoryUpgradeable is
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __Factory_init_unchained(implement_);
-        __AccessControl_init();
-        __UUPSUpgradeable_init();
         __Payment_init(payment_);
 
         bytes32 operatorRole = OPERATOR_ROLE;
@@ -66,7 +62,7 @@ contract CryptoPaymentFactoryUpgradeable is
         Types.PaymentInfo calldata paymentInfo_,
         Types.FeeInfo calldata clientInfo,
         Types.FeeInfo calldata agentInfo
-    ) external onlyRole(OPERATOR_ROLE) {
+    ) external override onlyRole(OPERATOR_ROLE) {
         Types.FeeInfo memory adminInfo = Types.FeeInfo(
             admin(),
             HUNDER_PERCENT - clientInfo.percentage - agentInfo.percentage
@@ -84,41 +80,12 @@ contract CryptoPaymentFactoryUpgradeable is
     function claimFees(
         uint256 uid_,
         address[] calldata accounts_
-    ) external onlyRole(SERVER_ROLE) returns (uint256[] memory success) {
-        _setUsed(uid_);
-
-        uint256 length = accounts_.length;
-        success = new uint256[](length);
-
-        bytes memory callData = abi.encodeCall(
-            IERC20Upgradeable.transferFrom,
-            (address(0), admin(), paymentInfo.amount)
-        );
-
-        address payment = paymentInfo.token;
-        bool ok;
-        address account;
-
-        for (uint256 i; i < length; ) {
-            account = accounts_[i];
-
-            assembly {
-                mstore(add(callData, 0x24), account)
-            }
-
-            (ok, ) = payment.call(callData);
-
-            success[i] = ok ? 2 : 1;
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        emit Claimed(_msgSender(), success);
+    ) external override onlyRole(SERVER_ROLE) returns (uint256[] memory success) {
+        Types.PaymentInfo memory paymentInfo_ = paymentInfo;
+        return _claimFees(uid_, paymentInfo_, admin(), accounts_);
     }
 
-    function distribute(ICryptoPayment[] calldata instances_) external onlyRole(OPERATOR_ROLE) {
+    function distribute(ICryptoPaymentUpgradeable[] calldata instances_) external override onlyRole(OPERATOR_ROLE) {
         uint256 length = instances_.length;
         for (uint i = 0; i < length; ) {
             instances_[i].distribute();
@@ -137,11 +104,11 @@ contract CryptoPaymentFactoryUpgradeable is
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin_);
     }
 
-    function setPayment(Types.PaymentInfo calldata payment_) external onlyRole(OPERATOR_ROLE) {
+    function setPayment(Types.PaymentInfo calldata payment_) external override onlyRole(OPERATOR_ROLE) {
         _setPayment(payment_);
     }
 
-    function setImplement(address implement_) external onlyRole(UPGRADER_ROLE) {
+    function setImplement(address implement_) external override onlyRole(UPGRADER_ROLE) {
         _setImplement(implement_);
     }
 

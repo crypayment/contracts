@@ -31,8 +31,21 @@ const deployAndVerify = async (
 };
 
 async function main() {
+  const USDC = "0xB33B3237f00C5803e135ACa5eCB9e11668957Ab9";
+  const admin = "0xb204A17dc1c462bbbEd44Ade9D58721568bE7115";
+  const payment = [USDC, 10 * 50 ** 6];
   // original
-  await deployAndVerify("CryptoPayment", [], true, "contracts/CryptoPayment.sol:CryptoPayment");
+  const instance = await deployAndVerify("CryptoPayment", [], true, "contracts/CryptoPayment.sol:CryptoPayment");
+  await deployAndVerify(
+    "CryptoPaymentFactoryUpgradeable",
+    [instance.address, admin, admin, admin, payment],
+    true,
+    "contracts/CryptoPaymentFactoryUpgradeable.sol:CryptoPaymentFactoryUpgradeable",
+    {
+      kind: "uups",
+      initializer: "initialize",
+    },
+  );
 }
 
 // We recommend this pattern to be able to use async/await everywhere
