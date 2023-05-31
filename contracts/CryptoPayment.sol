@@ -30,9 +30,6 @@ contract CryptoPayment is
 {
     using Types for Types.Claim;
 
-    bytes32 private constant TRANSFER_SELECTOR = 0xa9059cbb00000000000000000000000000000000000000000000000000000000;
-    bytes32 private constant BALANCEOF_SELECTOR = 0x70a0823100000000000000000000000000000000000000000000000000000000;
-
     address public factory;
     address public roleManager;
 
@@ -62,45 +59,15 @@ contract CryptoPayment is
     function distribute() external override onlyFactoryRole(OPERATOR_ROLE) {
         (address[] memory recipients, uint256[] memory fees) = viewFees();
         uint256 length = recipients.length;
-        address payment = paymentInfo.token;
 
-        assembly {
-            let contractAddress := address()
-            let callResult
-            let mptr := mload(0x40)
-            mstore(mptr, BALANCEOF_SELECTOR)
-            mstore(add(mptr, 0x04), contractAddress)
+        IERC20Upgradeable token = IERC20Upgradeable(paymentInfo.token);
+        uint256 balance = token.balanceOf(address(this));
 
-            callResult := staticcall(gas(), calldataload(payment), mptr, 0x24, 0x00, 0x20)
-
-            if iszero(callResult) {
-                revert(0, 0)
-            }
-
-            let total := mload(0x00)
-
-            for {
-                let recipientSlot := add(recipients, 0x20)
-                let feeSlot := add(fees, 0x20)
-                let end := add(recipientSlot, shl(5, length))
-            } lt(recipientSlot, end) {
-                recipientSlot := add(recipientSlot, 0x20)
-                feeSlot := add(feeSlot, 0x20)
-            } {
-                if gt(total, 0) {
-                    mptr := mload(0x40)
-                    mstore(mptr, TRANSFER_SELECTOR)
-                    mstore(add(mptr, 0x04), mload(recipientSlot))
-                    mstore(add(mptr, 0x24), div(mul(total, mload(feeSlot)), HUNDER_PERCENT))
-
-                    callResult := and(
-                        or(and(eq(mload(0), 1), gt(returndatasize(), 31)), iszero(returndatasize())),
-                        call(gas(), calldataload(payment), 0, mptr, 0x44, 0, 0x20)
-                    )
-
-                    if iszero(callResult) {
-                        revert(0, 0)
-                    }
+        if (balance > 0) {
+            for (uint i = 0; i < length; ) {
+                unchecked {
+                    token.transfer(recipients[i], (balance * HUNDER_PERCENT) / fees[i]);
+                    ++i;
                 }
             }
         }
