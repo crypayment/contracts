@@ -34,7 +34,7 @@ contract CryptoPaymentFactoryUpgradeable is
 
     bytes4 private constant INITIALIZE_SELECTOR = 0x1cd8a2e0;
 
-    address public roleManager;
+    address public override roleManager;
 
     mapping(bytes32 => Types.CloneInfo) public instance;
 

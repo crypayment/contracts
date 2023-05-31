@@ -8,6 +8,8 @@ interface ICryptoPaymentFactoryUpgradeable {
     error Factory__NotAuthorized();
     error Factory__InvalidSignatures();
 
+    function roleManager() external view returns (address);
+
     function createContract(
         bytes32 salt_,
         Types.PaymentInfo calldata paymentInfo_,

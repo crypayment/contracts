@@ -31,14 +31,30 @@ const deployAndVerify = async (
 };
 
 async function main() {
-  const USDC = "0xB33B3237f00C5803e135ACa5eCB9e11668957Ab9";
+  const USDC = "0x3AfB052aD80637a3e979a935Bd784e3E07D258d3";
   const admin = "0xb204A17dc1c462bbbEd44Ade9D58721568bE7115";
+  const operators = [admin];
+  const servers = [admin];
+  const name = "RoleManager";
+  const version = "1";
+  const threshold = 2;
   const payment = [USDC, 10 * 50 ** 6];
-  // original
+
+  const roleManager = await deployAndVerify(
+    "RoleManagerUpgradeable",
+    [admin, operators, servers, name, version, threshold],
+    true,
+    "contracts/RoleManagerUpgradeable.sol:RoleManagerUpgradeable",
+    {
+      kind: "uups",
+      initializer: "initialize",
+    },
+  );
+
   const instance = await deployAndVerify("CryptoPayment", [], true, "contracts/CryptoPayment.sol:CryptoPayment");
   await deployAndVerify(
     "CryptoPaymentFactoryUpgradeable",
-    [instance.address, admin, admin, admin, payment],
+    [instance.address, roleManager.address, payment],
     true,
     "contracts/CryptoPaymentFactoryUpgradeable.sol:CryptoPaymentFactoryUpgradeable",
     {

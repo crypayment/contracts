@@ -31,7 +31,6 @@ contract CryptoPayment is
     using Types for Types.Claim;
 
     address public factory;
-    address public roleManager;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -47,11 +46,9 @@ contract CryptoPayment is
         Types.PaymentInfo calldata paymentInfo_,
         Types.FeeInfo calldata adminInfo_,
         Types.FeeInfo calldata clientInfo_,
-        Types.FeeInfo calldata agentInfo_,
-        address roleManager_
+        Types.FeeInfo calldata agentInfo_
     ) external initializer {
         factory = _msgSender();
-        roleManager = roleManager_;
         __Payment_init(paymentInfo_);
         __FeeCollector_init(adminInfo_, clientInfo_, agentInfo_);
     }
@@ -82,6 +79,8 @@ contract CryptoPayment is
         Types.PaymentInfo memory paymentInfo_ = paymentInfo;
 
         bytes32 claimHash = claim_.hash();
+        address roleManager = ICryptoPaymentFactoryUpgradeable(factory).roleManager();
+
         if (!ISignatureVerifierUpgradeable(roleManager).verify(claimHash, claim_.deadline, signatures_)) {
             revert InvalidSignatures();
         }
@@ -105,6 +104,8 @@ contract CryptoPayment is
 
     function _checkFactoryRole(bytes32 role) internal view returns (bool) {
         address sender = _msgSender();
+        address roleManager = ICryptoPaymentFactoryUpgradeable(factory).roleManager();
+
         // direct call
         if (IAccessControlUpgradeable(roleManager).hasRole(role, sender)) return true;
 
