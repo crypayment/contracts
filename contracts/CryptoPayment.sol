@@ -1,25 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { Context } from "@openzeppelin/contracts/utils/Context.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
-import { FeeCollector } from "./internal/FeeCollector.sol";
-import { UniqueChecking } from "./internal/UniqueChecking.sol";
-import { Payment } from "./internal/Payment.sol";
+import { ClaimFeeUpgradeable } from "./internal-upgradeable/ClaimFeeUpgradeable.sol";
+import { FeeCollectorUpgradeable } from "./internal-upgradeable/FeeCollectorUpgradeable.sol";
+import { PaymentUpgradeable } from "./internal-upgradeable/PaymentUpgradeable.sol";
+import { SignatureVerifierUpgradeable } from "./internal-upgradeable/SignatureVerifierUpgradeable.sol";
 
-import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
-import { ICryptoPayment } from "./interfaces/ICryptoPayment.sol";
-import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
-import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
 import { IAccessControlUpgradeable } from "./interfaces/IAccessControlUpgradeable.sol";
+import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
+import { ICryptoPaymentUpgradeable } from "./interfaces/ICryptoPaymentUpgradeable.sol";
+import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
+import { IRoleManagerUpgradeable } from "./interfaces/IRoleManagerUpgradeable.sol";
+import { ISignatureVerifierUpgradeable } from "./interfaces/ISignatureVerifierUpgradeable.sol";
 
 import { Types } from "./libraries/Types.sol";
 import { HUNDER_PERCENT, OPERATOR_ROLE, SERVER_ROLE } from "./libraries/Constants.sol";
 
-contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, UniqueChecking, Payment {
-    bytes32 private constant TRANSFER_SELECTOR = 0xa9059cbb00000000000000000000000000000000000000000000000000000000;
-    bytes32 private constant BALANCEOF_SELECTOR = 0x70a0823100000000000000000000000000000000000000000000000000000000;
+contract CryptoPayment is
+    ICryptoPaymentUpgradeable,
+    Initializable,
+    ContextUpgradeable,
+    ClaimFeeUpgradeable,
+    FeeCollectorUpgradeable,
+    PaymentUpgradeable,
+    SignatureVerifierUpgradeable
+{
+    using Types for Types.Claim;
 
     address public factory;
 
@@ -40,54 +49,22 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         Types.FeeInfo calldata agentInfo_
     ) external initializer {
         factory = _msgSender();
-        _setPayment(paymentInfo_);
-        _addFee(adminInfo_);
-        _addFee(clientInfo_);
-        _addFee(agentInfo_);
+        __Payment_init(paymentInfo_);
+        __FeeCollector_init(adminInfo_, clientInfo_, agentInfo_);
     }
 
     function distribute() external override onlyFactoryRole(OPERATOR_ROLE) {
         (address[] memory recipients, uint256[] memory fees) = viewFees();
         uint256 length = recipients.length;
-        address payment = paymentInfo.token;
 
-        assembly {
-            let contractAddress := address()
-            let callResult
-            let mptr := mload(0x40)
-            mstore(mptr, BALANCEOF_SELECTOR)
-            mstore(add(mptr, 0x04), contractAddress)
+        IERC20Upgradeable token = IERC20Upgradeable(paymentInfo.token);
+        uint256 balance = token.balanceOf(address(this));
 
-            callResult := staticcall(gas(), calldataload(payment), mptr, 0x24, 0x00, 0x20)
-
-            if iszero(callResult) {
-                revert(0, 0)
-            }
-
-            let total := mload(0x00)
-
-            for {
-                let recipientSlot := add(recipients, 0x20)
-                let feeSlot := add(fees, 0x20)
-                let end := add(recipientSlot, shl(5, length))
-            } lt(recipientSlot, end) {
-                recipientSlot := add(recipientSlot, 0x20)
-                feeSlot := add(feeSlot, 0x20)
-            } {
-                if gt(total, 0) {
-                    mptr := mload(0x40)
-                    mstore(mptr, TRANSFER_SELECTOR)
-                    mstore(add(mptr, 0x04), mload(recipientSlot))
-                    mstore(add(mptr, 0x24), div(mul(total, mload(feeSlot)), HUNDER_PERCENT))
-
-                    callResult := and(
-                        or(and(eq(mload(0), 1), gt(returndatasize(), 31)), iszero(returndatasize())),
-                        call(gas(), calldataload(payment), 0, mptr, 0x44, 0, 0x20)
-                    )
-
-                    if iszero(callResult) {
-                        revert(0, 0)
-                    }
+        if (balance > 0) {
+            for (uint i = 0; i < length; ) {
+                unchecked {
+                    token.transfer(recipients[i], (balance * HUNDER_PERCENT) / fees[i]);
+                    ++i;
                 }
             }
         }
@@ -96,39 +73,19 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
     }
 
     function claimFees(
-        uint256 uid_,
-        address[] calldata accounts_
-    ) external onlyFactoryRole(SERVER_ROLE) returns (uint256[] memory success) {
-        _setUsed(uid_);
+        Types.Claim calldata claim_,
+        Types.Signature[] calldata signatures_
+    ) external override onlyFactoryRole(SERVER_ROLE) returns (uint256[] memory success) {
+        Types.PaymentInfo memory paymentInfo_ = paymentInfo;
 
-        uint256 length = accounts_.length;
-        success = new uint256[](length);
+        bytes32 claimHash = claim_.hash();
+        address roleManager = ICryptoPaymentFactoryUpgradeable(factory).roleManager();
 
-        bytes memory callData = abi.encodeCall(
-            IERC20Upgradeable.transferFrom,
-            (address(0), address(this), paymentInfo.amount)
-        );
-
-        address payment = paymentInfo.token;
-        bool ok;
-        address account;
-        for (uint256 i; i < length; ) {
-            account = accounts_[i];
-
-            assembly {
-                mstore(add(callData, 0x24), account)
-            }
-
-            (ok, ) = payment.call(callData);
-
-            success[i] = ok ? 2 : 1;
-
-            unchecked {
-                ++i;
-            }
+        if (!ISignatureVerifierUpgradeable(roleManager).verify(claimHash, claim_.deadline, signatures_)) {
+            revert InvalidSignatures();
         }
 
-        emit Claimed(_msgSender(), success);
+        return _claimFees(claim_.nonce, paymentInfo_, address(this), claim_.accounts);
     }
 
     function config(
@@ -137,7 +94,7 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
         Types.FeeInfo calldata agentInfo_
     ) external onlyFactoryRole(OPERATOR_ROLE) {
         Types.FeeInfo memory adminInfo = Types.FeeInfo(
-            ICryptoPaymentFactoryUpgradeable(factory).admin(),
+            IRoleManagerUpgradeable(factory).admin(),
             HUNDER_PERCENT - clientInfo_.percentage - agentInfo_.percentage
         );
 
@@ -147,11 +104,13 @@ contract CryptoPayment is ICryptoPayment, Initializable, Context, FeeCollector, 
 
     function _checkFactoryRole(bytes32 role) internal view returns (bool) {
         address sender = _msgSender();
+        address roleManager = ICryptoPaymentFactoryUpgradeable(factory).roleManager();
+
         // direct call
-        if (IAccessControlUpgradeable(factory).hasRole(role, sender)) return true;
+        if (IAccessControlUpgradeable(roleManager).hasRole(role, sender)) return true;
 
         // forward call
-        if (sender == factory && IAccessControlUpgradeable(factory).hasRole(role, tx.origin)) return true;
+        if (sender == factory && IAccessControlUpgradeable(roleManager).hasRole(role, tx.origin)) return true;
         return false;
     }
 }

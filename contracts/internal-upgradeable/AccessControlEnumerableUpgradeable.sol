@@ -20,9 +20,11 @@ abstract contract AccessControlEnumerableUpgradeable is
 
     mapping(bytes32 => EnumerableSet.AddressSet) private _roleMembers;
 
-    // function __AccessControlEnumerable_init() internal onlyInitializing {}
+    /* solhint-disable no-empty-blocks */
+    function __AccessControlEnumerable_init() internal onlyInitializing {}
 
-    // function __AccessControlEnumerable_init_unchained() internal onlyInitializing {}
+    /* solhint-disable no-empty-blocks */
+    function __AccessControlEnumerable_init_unchained() internal onlyInitializing {}
 
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return
@@ -56,6 +58,29 @@ abstract contract AccessControlEnumerableUpgradeable is
     function _revokeRole(bytes32 role, address account) internal virtual override {
         super._revokeRole(role, account);
         _roleMembers[role].remove(account);
+    }
+
+    function _grantRoles(bytes32 role_, address[] calldata accounts_) internal {
+        uint256 length = accounts_.length;
+
+        for (uint256 i; i < length; ) {
+            _grantRole(role_, accounts_[i]);
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _revokeRoles(bytes32 role_, address[] calldata accounts_) internal {
+        uint256 length = accounts_.length;
+
+        for (uint256 i; i < length; ) {
+            _revokeRole(role_, accounts_[i]);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     uint256[49] private __gap;

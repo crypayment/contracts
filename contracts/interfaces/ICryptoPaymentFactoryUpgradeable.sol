@@ -2,17 +2,13 @@
 
 pragma solidity 0.8.19;
 import { Types } from "../libraries/Types.sol";
+import { ICryptoPaymentUpgradeable } from "./ICryptoPaymentUpgradeable.sol";
 
 interface ICryptoPaymentFactoryUpgradeable {
-    error Factory__ExecutionFailed();
     error Factory__NotAuthorized();
-    error Factory__AlreadyCharged();
+    error Factory__InvalidSignatures();
 
-    function admin() external view returns (address);
-
-    function changeAdmin(address newAdmin_) external;
-
-    function setImplement(address implement_) external;
+    function roleManager() external view returns (address);
 
     function createContract(
         bytes32 salt_,
@@ -21,6 +17,16 @@ interface ICryptoPaymentFactoryUpgradeable {
         Types.FeeInfo calldata clientInfo
     ) external;
 
+    function claimFees(
+        Types.Claim calldata claim_,
+        Types.Signature[] calldata signatures_
+    ) external returns (uint256[] memory success);
+
+    function distribute(ICryptoPaymentUpgradeable[] calldata instances_) external;
+
+    function setPayment(Types.PaymentInfo calldata payment_) external;
+
+    function setImplement(address implement_) external;
+
     event NewInstance(address indexed clone);
-    event Claimed(address indexed sender, uint256[] success);
 }
