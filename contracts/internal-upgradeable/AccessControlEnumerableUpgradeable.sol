@@ -20,8 +20,10 @@ abstract contract AccessControlEnumerableUpgradeable is
 
     mapping(bytes32 => EnumerableSet.AddressSet) private _roleMembers;
 
+    /* solhint-disable no-empty-blocks */
     function __AccessControlEnumerable_init() internal onlyInitializing {}
 
+    /* solhint-disable no-empty-blocks */
     function __AccessControlEnumerable_init_unchained() internal onlyInitializing {}
 
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
