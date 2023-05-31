@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 
 import { ClonesUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UpgradeableBeacon } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ErrorHandler } from "../libraries/ErrorHandler.sol";
 import { EnumerableSet } from "../libraries/EnumerableSet.sol";
 

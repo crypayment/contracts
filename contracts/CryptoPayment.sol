@@ -7,27 +7,34 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import { ClaimFeeUpgradeable } from "./internal-upgradeable/ClaimFeeUpgradeable.sol";
 import { FeeCollectorUpgradeable } from "./internal-upgradeable/FeeCollectorUpgradeable.sol";
 import { PaymentUpgradeable } from "./internal-upgradeable/PaymentUpgradeable.sol";
+import { SignatureVerifierUpgradeable } from "./internal-upgradeable/SignatureVerifierUpgradeable.sol";
 
 import { IAccessControlUpgradeable } from "./interfaces/IAccessControlUpgradeable.sol";
 import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
 import { ICryptoPaymentUpgradeable } from "./interfaces/ICryptoPaymentUpgradeable.sol";
 import { ICryptoPaymentFactoryUpgradeable } from "./interfaces/ICryptoPaymentFactoryUpgradeable.sol";
+import { IRoleManagerUpgradeable } from "./interfaces/IRoleManagerUpgradeable.sol";
+import { ISignatureVerifierUpgradeable } from "./interfaces/ISignatureVerifierUpgradeable.sol";
 
 import { Types } from "./libraries/Types.sol";
 import { HUNDER_PERCENT, OPERATOR_ROLE, SERVER_ROLE } from "./libraries/Constants.sol";
 
-contract CryptoPaymentUpgradeable is
+contract CryptoPayment is
     ICryptoPaymentUpgradeable,
     Initializable,
     ContextUpgradeable,
     ClaimFeeUpgradeable,
     FeeCollectorUpgradeable,
-    PaymentUpgradeable
+    PaymentUpgradeable,
+    SignatureVerifierUpgradeable
 {
+    using Types for Types.Claim;
+
     bytes32 private constant TRANSFER_SELECTOR = 0xa9059cbb00000000000000000000000000000000000000000000000000000000;
     bytes32 private constant BALANCEOF_SELECTOR = 0x70a0823100000000000000000000000000000000000000000000000000000000;
 
     address public factory;
+    address public roleManager;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -43,9 +50,11 @@ contract CryptoPaymentUpgradeable is
         Types.PaymentInfo calldata paymentInfo_,
         Types.FeeInfo calldata adminInfo_,
         Types.FeeInfo calldata clientInfo_,
-        Types.FeeInfo calldata agentInfo_
+        Types.FeeInfo calldata agentInfo_,
+        address roleManager_
     ) external initializer {
         factory = _msgSender();
+        roleManager = roleManager_;
         __Payment_init(paymentInfo_);
         __FeeCollector_init(adminInfo_, clientInfo_, agentInfo_);
     }
@@ -100,11 +109,17 @@ contract CryptoPaymentUpgradeable is
     }
 
     function claimFees(
-        uint256 uid_,
-        address[] calldata accounts_
+        Types.Claim calldata claim_,
+        Types.Signature[] calldata signatures_
     ) external override onlyFactoryRole(SERVER_ROLE) returns (uint256[] memory success) {
         Types.PaymentInfo memory paymentInfo_ = paymentInfo;
-        return _claimFees(uid_, paymentInfo_, address(this), accounts_);
+
+        bytes32 claimHash = claim_.hash();
+        if (!ISignatureVerifierUpgradeable(roleManager).verify(claimHash, claim_.deadline, signatures_)) {
+            revert InvalidSignatures();
+        }
+
+        return _claimFees(claim_.nonce, paymentInfo_, address(this), claim_.accounts);
     }
 
     function config(
@@ -113,7 +128,7 @@ contract CryptoPaymentUpgradeable is
         Types.FeeInfo calldata agentInfo_
     ) external onlyFactoryRole(OPERATOR_ROLE) {
         Types.FeeInfo memory adminInfo = Types.FeeInfo(
-            ICryptoPaymentFactoryUpgradeable(factory).admin(),
+            IRoleManagerUpgradeable(factory).admin(),
             HUNDER_PERCENT - clientInfo_.percentage - agentInfo_.percentage
         );
 
@@ -124,10 +139,10 @@ contract CryptoPaymentUpgradeable is
     function _checkFactoryRole(bytes32 role) internal view returns (bool) {
         address sender = _msgSender();
         // direct call
-        if (IAccessControlUpgradeable(factory).hasRole(role, sender)) return true;
+        if (IAccessControlUpgradeable(roleManager).hasRole(role, sender)) return true;
 
         // forward call
-        if (sender == factory && IAccessControlUpgradeable(factory).hasRole(role, tx.origin)) return true;
+        if (sender == factory && IAccessControlUpgradeable(roleManager).hasRole(role, tx.origin)) return true;
         return false;
     }
 }

@@ -64,5 +64,5 @@ contract FeeCollectorUpgradeable is IFeeCollector, Initializable {
         return (recipients, percentages);
     }
 
-    uint256[9] private __gap;
+    uint256[19] private __gap;
 }

@@ -2,12 +2,18 @@
 
 pragma solidity 0.8.19;
 
+import { Types } from "../libraries/Types.sol";
+
 interface ICryptoPaymentUpgradeable {
     error NotAuthorized();
+    error InvalidSignatures();
 
     event Distribute();
 
     function distribute() external;
 
-    function claimFees(uint256 uid_, address[] calldata accounts_) external returns (uint256[] memory success);
+    function claimFees(
+        Types.Claim calldata claim_,
+        Types.Signature[] calldata signatures_
+    ) external returns (uint256[] memory success);
 }

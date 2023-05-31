@@ -5,13 +5,8 @@ import { Types } from "../libraries/Types.sol";
 import { ICryptoPaymentUpgradeable } from "./ICryptoPaymentUpgradeable.sol";
 
 interface ICryptoPaymentFactoryUpgradeable {
-    error Factory__ExecutionFailed();
     error Factory__NotAuthorized();
-    error Factory__AlreadyCharged();
-
-    function admin() external view returns (address);
-
-    function changeAdmin(address newAdmin_) external;
+    error Factory__InvalidSignatures();
 
     function createContract(
         bytes32 salt_,
@@ -20,7 +15,10 @@ interface ICryptoPaymentFactoryUpgradeable {
         Types.FeeInfo calldata clientInfo
     ) external;
 
-    function claimFees(uint256 uid_, address[] calldata accounts_) external returns (uint256[] memory success);
+    function claimFees(
+        Types.Claim calldata claim_,
+        Types.Signature[] calldata signatures_
+    ) external returns (uint256[] memory success);
 
     function distribute(ICryptoPaymentUpgradeable[] calldata instances_) external;
 
