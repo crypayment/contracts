@@ -7,7 +7,6 @@ import { ContextUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/Co
 import { ClaimFeeUpgradeable } from "./internal-upgradeable/ClaimFeeUpgradeable.sol";
 import { FeeCollectorUpgradeable } from "./internal-upgradeable/FeeCollectorUpgradeable.sol";
 import { PaymentUpgradeable } from "./internal-upgradeable/PaymentUpgradeable.sol";
-import { SignatureVerifierUpgradeable } from "./internal-upgradeable/SignatureVerifierUpgradeable.sol";
 
 import { IAccessControlUpgradeable } from "./interfaces/IAccessControlUpgradeable.sol";
 import { IERC20Upgradeable } from "./interfaces/IERC20Upgradeable.sol";
@@ -25,8 +24,7 @@ contract CryptoPayment is
     ContextUpgradeable,
     ClaimFeeUpgradeable,
     FeeCollectorUpgradeable,
-    PaymentUpgradeable,
-    SignatureVerifierUpgradeable
+    PaymentUpgradeable
 {
     using Types for Types.Claim;
 
@@ -63,7 +61,7 @@ contract CryptoPayment is
         if (balance > 0) {
             for (uint i = 0; i < length; ) {
                 unchecked {
-                    token.transfer(recipients[i], (balance * HUNDER_PERCENT) / fees[i]);
+                    token.transfer(recipients[i], ((balance * fees[i]) / HUNDER_PERCENT));
                     ++i;
                 }
             }
@@ -93,8 +91,10 @@ contract CryptoPayment is
         Types.FeeInfo calldata clientInfo_,
         Types.FeeInfo calldata agentInfo_
     ) external onlyFactoryRole(OPERATOR_ROLE) {
+        address roleManager = ICryptoPaymentFactoryUpgradeable(factory).roleManager();
+        address admin = IRoleManagerUpgradeable(roleManager).admin();
         Types.FeeInfo memory adminInfo = Types.FeeInfo(
-            IRoleManagerUpgradeable(factory).admin(),
+            admin,
             HUNDER_PERCENT - clientInfo_.percentage - agentInfo_.percentage
         );
 
