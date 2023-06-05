@@ -52,8 +52,10 @@ abstract contract ClaimFeeUpgradeable is UniqueCheckingUpgradeable {
 
                 (ok, ) = paymentToken.call(callData);
                 if (ok) {
-                    success[i] = ok ? 2 : 1;
+                    success[i] = 2;
                     _setUsed(paymentId);
+                } else {
+                    success[i] = 1;
                 }
             }
 
