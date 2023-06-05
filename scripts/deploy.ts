@@ -37,7 +37,7 @@ async function main() {
   const servers = [admin];
   const name = "RoleManager";
   const version = "1";
-  const threshold = 2;
+  const threshold = 1;
   const payment = [USDC, 10 * 50 ** 6];
 
   const roleManager = await deployAndVerify(

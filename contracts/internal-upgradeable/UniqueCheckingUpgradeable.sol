@@ -16,7 +16,7 @@ abstract contract UniqueCheckingUpgradeable {
         _isUsed.set(uid_);
     }
 
-    function isUsed(uint256 uid_) external view returns (bool) {
+    function _used(uint256 uid_) internal view returns (bool) {
         return _isUsed.get(uid_);
     }
 }

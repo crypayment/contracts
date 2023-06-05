@@ -51,6 +51,10 @@ contract RoleManagerUpgradeable is
         _grantRole(DEFAULT_ADMIN_ROLE, newAdmin_);
     }
 
+    function setThreshhold(uint8 threshold_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setThreshhold(threshold_);
+    }
+
     /* solhint-disable no-empty-blocks */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 }

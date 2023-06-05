@@ -7,7 +7,7 @@ import { AccessControlEnumerableUpgradeable } from "./AccessControlEnumerableUpg
 import { EIP712Upgradeable, ECDSAUpgradeable } from "./EIP712Upgradeable.sol";
 import { ISignatureVerifierUpgradeable } from "../interfaces/ISignatureVerifierUpgradeable.sol";
 import { Types } from "../libraries/Types.sol";
-import { SERVER_ROLE } from "../libraries/Constants.sol";
+import { SIGNER_ROLE } from "../libraries/Constants.sol";
 
 error LowThreshold();
 
@@ -37,7 +37,7 @@ contract SignatureVerifierUpgradeable is
         __AccessControlEnumerable_init_unchained();
         __EIP712_init_unchained(name_, version_);
         _setThreshhold(threshold_);
-        _grantRoles(SERVER_ROLE, oracles_);
+        _grantRoles(SIGNER_ROLE, oracles_);
     }
 
     function _setThreshhold(uint8 threshold_) internal {
@@ -74,7 +74,7 @@ contract SignatureVerifierUpgradeable is
             if (recoveredAddress != address(0) && recoveredAddress < lastAddress) return false;
 
             // InvalidOracle
-            if (!hasRole(SERVER_ROLE, recoveredAddress)) return false;
+            if (!hasRole(SIGNER_ROLE, recoveredAddress)) return false;
 
             lastAddress = recoveredAddress;
 
